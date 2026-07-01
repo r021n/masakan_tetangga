@@ -1,5 +1,13 @@
 import { relations } from "drizzle-orm";
-import { pgTable, text, timestamp, boolean, index } from "drizzle-orm/pg-core";
+import {
+  pgTable,
+  text,
+  timestamp,
+  boolean,
+  index,
+  geometry,
+  integer,
+} from "drizzle-orm/pg-core";
 
 export const user = pgTable("user", {
   id: text("id").primaryKey(),
@@ -76,6 +84,7 @@ export const verification = pgTable(
 export const userRelations = relations(user, ({ many }) => ({
   sessions: many(session),
   accounts: many(account),
+  daftarMasakan: many(masakan),
 }));
 
 export const sessionRelations = relations(session, ({ one }) => ({
@@ -88,6 +97,49 @@ export const sessionRelations = relations(session, ({ one }) => ({
 export const accountRelations = relations(account, ({ one }) => ({
   user: one(user, {
     fields: [account.userId],
+    references: [user.id],
+  }),
+}));
+
+// --- Masakan ---
+
+export const masakan = pgTable(
+  "masakan",
+  {
+    id: text("id").primaryKey(),
+    penjualId: text("penjual_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    nama: text("nama").notNull(),
+    deskripsi: text("deskripsi").notNull().default(""),
+    harga: integer("harga").notNull(),
+    porsi: integer("porsi").notNull().default(1),
+    kategori: text("kategori").notNull().default("makanan_berat"),
+    lokasi: geometry("lokasi", {
+      type: "point",
+      mode: "xy",
+      srid: 4326,
+    }).notNull(),
+    alamat: text("alamat").notNull().default(""),
+    status: text("status").notNull().default("tersedia"),
+    batasWaktu: timestamp("batas_waktu").notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at")
+      .defaultNow()
+      .$onUpdate(() => new Date())
+      .notNull(),
+  },
+  (table) => [
+    index("masakan_penjual_id_idx").on(table.penjualId),
+    index("masakan_lokasi_idx").using("gist", table.lokasi),
+    index("masakan_status_idx").on(table.status),
+    index("masakan_batas_waktu_idx").on(table.batasWaktu),
+  ],
+);
+
+export const masakanRelations = relations(masakan, ({ one }) => ({
+  penjual: one(user, {
+    fields: [masakan.penjualId],
     references: [user.id],
   }),
 }));

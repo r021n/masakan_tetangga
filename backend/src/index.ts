@@ -4,6 +4,7 @@ import dotenv from "dotenv";
 import { toNodeHandler } from "better-auth/node";
 import { auth } from "./lib/auth";
 import { requireAuth } from "./middleware/auth";
+import masakanRoutes from "./routes/masakan";
 
 dotenv.config();
 
@@ -21,6 +22,8 @@ app.use(
 app.use("/api/auth/", toNodeHandler(auth));
 
 app.use(express.json());
+
+app.use(masakanRoutes);
 
 app.get("/api/me", requireAuth, async (req, res) => {
   const session = await auth.api.getSession({

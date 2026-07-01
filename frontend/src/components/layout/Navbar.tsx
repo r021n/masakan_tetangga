@@ -30,6 +30,9 @@ export default function Navbar() {
               <Link to="/dashboard" className="text-sm font-medium">
                 Dashboard
               </Link>
+              <Link to="/masakan/saya" className="text-sm font-medium">
+                Masakan Saya
+              </Link>
               <Button variant="outline" size="sm" onClick={handleLogout}>
                 Logout
               </Button>

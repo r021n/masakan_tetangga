@@ -5,6 +5,8 @@ import Home from "@/pages/Home";
 import Login from "@/pages/Login";
 import Register from "@/pages/Register";
 import Dashboard from "@/pages/Dashboard";
+import BuatMasakan from "@/pages/BuatMasakan";
+import DaftarMasakan from "@/pages/DaftarMasakan";
 
 export default function App() {
   return (
@@ -16,6 +18,8 @@ export default function App() {
         <Route path="/register" element={<Register />} />
         <Route element={<ProtectedRoute />}>
           <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/masakan/buat" element={<BuatMasakan />} />
+          <Route path="/masakan/saya" element={<DaftarMasakan />} />
         </Route>
       </Routes>
     </div>
