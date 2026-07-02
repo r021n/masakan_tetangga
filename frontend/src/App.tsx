@@ -7,6 +7,7 @@ import Register from "@/pages/Register";
 import Dashboard from "@/pages/Dashboard";
 import BuatMasakan from "@/pages/BuatMasakan";
 import DaftarMasakan from "@/pages/DaftarMasakan";
+import PetaMasakan from "@/pages/PetaMasakan";
 
 export default function App() {
   return (
@@ -17,6 +18,7 @@ export default function App() {
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
         <Route element={<ProtectedRoute />}>
+          <Route path="/peta" element={<PetaMasakan />} />
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/masakan/buat" element={<BuatMasakan />} />
           <Route path="/masakan/saya" element={<DaftarMasakan />} />

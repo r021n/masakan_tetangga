@@ -15,23 +15,6 @@ export interface DataMasakan {
   jarak?: number;
 }
 
-export interface DataMasakan {
-  id: string;
-  penjualId: string;
-  nama: string;
-  deskripsi: string;
-  harga: number;
-  porsi: number;
-  kategori: KategoriMasakan;
-  lokasi: { x: number; y: number };
-  alamat: string;
-  status: StatusMasakan;
-  batasWaktu: string;
-  createdAt: string;
-  updatedAt: string;
-  jarak?: number;
-}
-
 export type KategoriMasakan =
   | "makanan_berat"
   | "makanan_ringan"

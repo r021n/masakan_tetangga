@@ -166,6 +166,16 @@ export default function DaftarMasakan() {
         </Button>
       </div>
 
+      <div className="mb-4 p-4 bg-primary/5 border border-primary/20 rounded-lg flex items-center justify-between">
+        <p className="text-sm">
+          Gunakan <strong>Peta Interaktif</strong> untuk pencarian yang lebih
+          mudah dan visual.
+        </p>
+        <Button size="sm" asChild>
+          <Link to="/peta">Buka Peta</Link>
+        </Button>
+      </div>
+
       {tab === "sekitar" && (
         <Card className="mb-6">
           <CardContent className="pt-6">

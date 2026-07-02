@@ -7,6 +7,7 @@ import { Toaster } from "@/components/ui/sonner";
 import { queryClient } from "@/lib/query-client";
 import App from "./App";
 import "./index.css";
+import "leaflet/dist/leaflet.css";
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
