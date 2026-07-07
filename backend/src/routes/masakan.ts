@@ -2,6 +2,7 @@ import { Router, Request, Response } from "express";
 import { db } from "../db";
 import { masakan } from "../db/schema";
 import { requireAuth } from "../middleware/auth";
+import { upload } from "../middleware/upload";
 import {
   buatMasakanSchema,
   updateMasakanSchema,
@@ -12,6 +13,8 @@ import { randomUUID } from "node:crypto";
 import { getParam } from "../utils/params";
 
 const router = Router();
+
+const { gambar, ...kolomTanpaGambar } = getTableColumns(masakan);
 
 // GET /api/masakan/radius — Cari masakan dalam radius tertentu dari titik pusat
 router.get("/api/masakan/radius", async (req: Request, res: Response) => {
@@ -42,7 +45,7 @@ router.get("/api/masakan/radius", async (req: Request, res: Response) => {
 
   const hasil = await db
     .select({
-      ...getTableColumns(masakan),
+      ...kolomTanpaGambar,
       jarak: sql<number>`ST_Distance(${masakan.lokasi}::geography, ${titikPusat}::geography)`,
     })
     .from(masakan)
@@ -58,7 +61,7 @@ router.get("/api/masakan/radius", async (req: Request, res: Response) => {
 // GET /api/masakan — Ambil semua masakan milik user yang sedang login
 router.get("/api/masakan", requireAuth, async (req: Request, res: Response) => {
   const daftar = await db
-    .select()
+    .select(kolomTanpaGambar)
     .from(masakan)
     .where(eq(masakan.penjualId, req.user!.id))
     .orderBy(sql`${masakan.createdAt} DESC`);
@@ -70,7 +73,7 @@ router.get("/api/masakan", requireAuth, async (req: Request, res: Response) => {
 router.get("/api/masakan/:id", async (req: Request, res: Response) => {
   const id = getParam(req.params, "id");
   const hasil = await db
-    .select()
+    .select(kolomTanpaGambar)
     .from(masakan)
     .where(eq(masakan.id, id))
     .limit(1);
@@ -83,12 +86,40 @@ router.get("/api/masakan/:id", async (req: Request, res: Response) => {
   res.json({ data: hasil[0] });
 });
 
+// GET /api/masakan/:id/gambar Ambil data biner gambar langsung dari database
+router.get("/api/masakan/:id/gambar", async (req: Request, res: Response) => {
+  const id = getParam(req.params, "id");
+  const hasil = await db
+    .select({ gambar: masakan.gambar })
+    .from(masakan)
+    .where(eq(masakan.id, id))
+    .limit(1);
+
+  if (!hasil.length || !hasil[0].gambar) {
+    res.status(404).json({ message: "Gambar tidak ditemukan" });
+    return;
+  }
+
+  res.setHeader("Content-Type", "image/jpeg");
+  res.send(hasil[0].gambar);
+});
+
 // POST /api/masakan — Buat masakan baru
 router.post(
   "/api/masakan",
   requireAuth,
+  upload.single("gambar"),
   async (req: Request, res: Response) => {
-    const parsed = buatMasakanSchema.safeParse(req.body);
+    const dataPreprocessed = {
+      ...req.body,
+      harga: req.body.harga !== undefined ? Number(req.body.harga) : undefined,
+      porsi: req.body.porsi !== undefined ? Number(req.body.porsi) : undefined,
+      lintang:
+        req.body.lintang !== undefined ? Number(req.body.lintang) : undefined,
+      bujur: req.body.bujur !== undefined ? Number(req.body.bujur) : undefined,
+    };
+
+    const parsed = buatMasakanSchema.safeParse(dataPreprocessed);
     if (!parsed.success) {
       res.status(400).json({
         message: "Data masakan tidak valid",
@@ -110,12 +141,14 @@ router.post(
         ...dataLainnya,
         lokasi: { x: bujur, y: lintang },
         batasWaktu: new Date(batasWaktu),
+        gambar: req.file ? req.file.buffer : null,
         createdAt: sekarang,
         updatedAt: sekarang,
       })
       .returning();
 
-    res.status(201).json({ data: baru });
+    const { gambar: _, ...baruTanpaGambar } = baru;
+    res.status(201).json({ data: baruTanpaGambar });
   },
 );
 
@@ -123,16 +156,9 @@ router.post(
 router.put(
   "/api/masakan/:id",
   requireAuth,
+  upload.single("gambar"),
   async (req: Request, res: Response) => {
     const id = getParam(req.params, "id");
-    const parsed = updateMasakanSchema.safeParse(req.body);
-    if (!parsed.success) {
-      res.status(400).json({
-        message: "Data masakan tidak valid",
-        errors: parsed.error.flatten().fieldErrors,
-      });
-      return;
-    }
 
     // Cek kepemilikan
     const [dataLama] = await db
@@ -153,6 +179,25 @@ router.put(
       return;
     }
 
+    // Lakukan konversi data bertipe angka secara manual sebelum validasi Zod.
+    const dataPreprocessed = {
+      ...req.body,
+      harga: req.body.harga !== undefined ? Number(req.body.harga) : undefined,
+      porsi: req.body.porsi !== undefined ? Number(req.body.porsi) : undefined,
+      lintang:
+        req.body.lintang !== undefined ? Number(req.body.lintang) : undefined,
+      bujur: req.body.bujur !== undefined ? Number(req.body.bujur) : undefined,
+    };
+
+    const parsed = updateMasakanSchema.safeParse(dataPreprocessed);
+    if (!parsed.success) {
+      res.status(400).json({
+        message: "Data masakan tidak valid",
+        errors: parsed.error.flatten().fieldErrors,
+      });
+      return;
+    }
+
     const { lintang, bujur, batasWaktu, ...dataLainnya } = parsed.data;
 
     const dataUpdate: Record<string, any> = { ...dataLainnya };
@@ -170,13 +215,18 @@ router.put(
       dataUpdate.batasWaktu = new Date(batasWaktu);
     }
 
+    if (req.file) {
+      dataUpdate.gambar = req.file.buffer;
+    }
+
     const [diperbarui] = await db
       .update(masakan)
       .set(dataUpdate)
       .where(eq(masakan.id, id))
       .returning();
 
-    res.json({ data: diperbarui });
+    const { gambar: _, ...diperbaruiTanpaGambar } = diperbarui;
+    res.json({ data: diperbaruiTanpaGambar });
   },
 );
 

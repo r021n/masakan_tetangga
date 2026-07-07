@@ -7,6 +7,7 @@ import {
   index,
   geometry,
   integer,
+  customType,
 } from "drizzle-orm/pg-core";
 
 export const user = pgTable("user", {
@@ -103,6 +104,19 @@ export const accountRelations = relations(account, ({ one }) => ({
 
 // --- Masakan ---
 
+export const bytea = customType<{ data: Buffer }>({
+  dataType() {
+    return "bytea";
+  },
+  toDriver(value: Buffer) {
+    return value;
+  },
+  fromDriver(value: unknown) {
+    if (value === null || value === undefined) return Buffer.alloc(0);
+    return Buffer.isBuffer(value) ? value : Buffer.from(value as any);
+  },
+});
+
 export const masakan = pgTable(
   "masakan",
   {
@@ -123,6 +137,7 @@ export const masakan = pgTable(
     alamat: text("alamat").notNull().default(""),
     status: text("status").notNull().default("tersedia"),
     batasWaktu: timestamp("batas_waktu").notNull(),
+    gambar: bytea("gambar"),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at")
       .defaultNow()
