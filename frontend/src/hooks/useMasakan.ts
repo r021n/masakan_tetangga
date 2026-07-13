@@ -10,19 +10,19 @@ interface MasakanDetailResponse {
   data: DataMasakan;
 }
 
-interface BuatMasakanPayload {
-  nama: string;
-  deskripsi: string;
-  harga: number;
-  porsi: number;
-  kategori: string;
-  lintang: number;
-  bujur: number;
-  alamat: string;
-  batasWaktu: string;
-}
+// interface BuatMasakanPayload {
+//   nama: string;
+//   deskripsi: string;
+//   harga: number;
+//   porsi: number;
+//   kategori: string;
+//   lintang: number;
+//   bujur: number;
+//   alamat: string;
+//   batasWaktu: string;
+// }
 
-interface UpdateMasakanPayload extends Partial<BuatMasakanPayload> {}
+// interface UpdateMasakanPayload extends Partial<BuatMasakanPayload> {}
 
 interface RadiusQueryParams {
   lintang: number;
@@ -77,7 +77,7 @@ export function useBuatMasakan() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (payload: BuatMasakanPayload) =>
+    mutationFn: (payload: FormData) =>
       api.post<MasakanDetailResponse>("/api/masakan", payload),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["masakan"] });
@@ -90,13 +90,8 @@ export function useUpdateMasakan() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({
-      id,
-      payload,
-    }: {
-      id: string;
-      payload: UpdateMasakanPayload;
-    }) => api.put<MasakanDetailResponse>(`/api/masakan/${id}`, payload),
+    mutationFn: ({ id, payload }: { id: string; payload: FormData }) =>
+      api.put<MasakanDetailResponse>(`/api/masakan/${id}`, payload),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["masakan"] });
     },

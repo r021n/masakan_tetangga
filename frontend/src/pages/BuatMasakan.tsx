@@ -1,9 +1,10 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { toast } from "sonner";
+import imageCompression from "browser-image-compression";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -72,6 +73,18 @@ export default function BuatMasakan() {
   const [kategoriValue, setKategoriValue] =
     useState<KategoriMasakan>("makanan_berat");
 
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string>("");
+  const [fileError, setFileError] = useState<string>("");
+
+  useEffect(() => {
+    return () => {
+      if (previewUrl) {
+        URL.revokeObjectURL(previewUrl);
+      }
+    };
+  }, [previewUrl]);
+
   const {
     register,
     handleSubmit,
@@ -85,9 +98,50 @@ export default function BuatMasakan() {
     },
   });
 
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    setFileError("");
+    if (!file) {
+      setSelectedFile(null);
+      setPreviewUrl("");
+      return;
+    }
+    if (!file.type.startsWith("image/")) {
+      setFileError("File harus berupa gambar");
+      return;
+    }
+    setSelectedFile(file);
+    setPreviewUrl(URL.createObjectURL(file));
+  };
+
   const onSubmit = async (data: BuatMasakanForm) => {
+    if (!selectedFile) {
+      setFileError("Foto masakan wajib diunggah");
+      return;
+    }
+
     try {
-      await buatMasakan.mutateAsync(data);
+      const options = {
+        maxSizeMB: 0.3,
+        maxWidthOrHeight: 1024,
+        useWebWorker: true,
+      };
+
+      const compressedFile = await imageCompression(selectedFile, options);
+
+      const formData = new FormData();
+      formData.append("nama", data.nama);
+      formData.append("deskripsi", data.deskripsi);
+      formData.append("harga", String(data.harga));
+      formData.append("porsi", String(data.porsi));
+      formData.append("kategori", data.kategori);
+      formData.append("lintang", String(data.lintang));
+      formData.append("bujur", String(data.bujur));
+      formData.append("alamat", data.alamat);
+      formData.append("batasWaktu", data.batasWaktu);
+      formData.append("gambar", compressedFile, compressedFile.name);
+
+      await buatMasakan.mutateAsync(formData);
       toast.success("Masakan berhasil diposting");
       navigate("/masakan/saya", { replace: true });
     } catch (error: any) {
@@ -249,6 +303,26 @@ export default function BuatMasakan() {
                 <p className="text-sm text-red-500">
                   {errors.batasWaktu.message}
                 </p>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="gambar">Foto Masakan</Label>
+              <Input
+                id="gambar"
+                type="file"
+                accept="image/*"
+                onChange={handleFileChange}
+              />
+              {fileError && <p className="text-sm text-red-500">{fileError}</p>}
+              {previewUrl && (
+                <div className="mt-2 aspect-video w-full max-w-xs overflow-hidden rounded-md border bg-muted">
+                  <img
+                    src={previewUrl}
+                    alt="Pratinjau foto masakan"
+                    className="h-full w-full object-cover"
+                  />
+                </div>
               )}
             </div>
 
